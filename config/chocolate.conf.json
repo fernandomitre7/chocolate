@@ -1,0 +1,36 @@
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": "8080",
+        "protocol": "http",
+        "api_version": "v1"
+    },
+    "env": "dev",
+    "debug": true,
+    "jwt": {
+        "pub_key": "config/jwt_key.pub",
+        "priv_key": "config/jwt_key.priv",
+        "audience": "https://api.chocolate.com"
+    },
+    "db": {
+        "host": "localhost",
+        "port": "5432",
+        "user": "user",
+        "password": "password",
+        "database": "chocolate"
+    },
+    "email": {
+        "provider": "google",
+        "host": "smtp.gmail.com",
+        "port": "587",
+        "tls": true,
+        "type": "text",
+        "auth": {
+            "username": "fernandomitre7@gmail.com",
+            "password": "ofakfkveegismixq"
+        },
+        "templates": {
+            "confirm": "data/email-templates/confirm.html"
+        }
+    }
+}
