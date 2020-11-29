@@ -19,6 +19,10 @@ if [ -f logs/${SERVICE_NAME}.log ]; then
     mv logs/${SERVICE_NAME}.log logs/${SERVICE_NAME}.${TODAY}.log; 
 fi
 
+if [ -f logs/${SERVICE_NAME}.out ]; then 
+    mv logs/${SERVICE_NAME}.out logs/${SERVICE_NAME}.${TODAY}.out; 
+fi
+
 if [ -f bin/PID ]; then 
     # for security if file still exists then just truncate it
     cat /dev/null > bin/PID

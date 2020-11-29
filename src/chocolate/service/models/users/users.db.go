@@ -9,53 +9,50 @@ import (
 	"chocolate/service/shared/logger"
 )
 
-var Fields = struct {
-	ID        string
-	Username  string
-	Password  string
-	Salt      string
-	Confirmed string
-	CreatedAt string
-}{
-	ID:        "id",
-	Username:  "username",
-	Password:  "password",
-	Salt:      "salt",
-	Confirmed: "confirmed",
-	CreatedAt: "created_at",
-}
-
 const (
 	qryAll     = `id, username, password, salt, confirmed, confirmed_at, created_at`
 	qryAllSafe = `id, username, confirmed, confirmed_at, created_at`
+
+	qryCreateTable = `CREATE TABLE IF NOT EXISTS users (
+		id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
+		username text NOT NULL UNIQUE,
+		password text NOT NULL, 
+		salt text NOT NULL, 
+		confirmed boolean NOT NULL DEFAULT FALSE,
+		confirmation_date timestamp with time zone,
+		created_at timestamp with time zone DEFAULT current_timestamp
+	)`
 )
 
-// scanAll scans a full row with all its columns into a user
-func scanAll(row *sql.Row, u *User) error {
-	var createdAt, confirmedAt time.Time
-	err := row.Scan(&u.ID, &u.Username, &u.Password, &u.Salt, &u.Confirmed, &confirmedAt, &createdAt)
-	if err != nil {
-		return err
+type userTable struct{}
+
+func (t userTable) Create(db *database.DB) *database.Error {
+	logger.Debug("models/userTable:Create() exec qry")
+	// Exec executes a query without returning any rows.
+	if _, err := db.GetInstance().Exec(qryCreateTable); err != nil {
+		logger.Errorf("models/users:createTable() Users table creation query failed %s", err.Error())
+		return db.FormError(err, qryCreateTable, "users")
 	}
-	u.CreatedAt = createdAt.Unix()
-	if !confirmedAt.IsZero() {
-		u.ConfirmedAt = confirmedAt.Unix()
+	// Add Unique Email Index create unique index users_unique_lower_email_idx on users (lower(email));
+	const indexQry = `CREATE UNIQUE INDEX IF NOT EXISTS users_unique_username_idx on users(lower(username))`
+	logger.Debug("models/userTable:Create() exec index qry")
+	// Exec executes a query without returning any rows.
+	if _, err := db.GetInstance().Exec(indexQry); err != nil {
+		logger.Errorf("models/users:createTable() Users table unique index creation failed %s", err.Error())
+		// should we delete the table?
+		return db.FormError(err, indexQry, "users")
 	}
+
 	return nil
 }
 
-// scanAllSafe scans a full row with all its columns into a user (except password related stuff)
-func scanAllSafe(row *sql.Row, u *User) error {
-	var createdAt, confirmedAt time.Time
-	err := row.Scan(&u.ID, &u.Username, &u.Confirmed, &confirmedAt, &createdAt)
-	if err != nil {
-		return err
-	}
-	u.CreatedAt = createdAt.Unix()
-	if !confirmedAt.IsZero() {
-		u.ConfirmedAt = confirmedAt.Unix()
-	}
-	return nil
+func (t userTable) Name() string {
+	return "users"
+}
+
+// GetTable returns the Model Table struct which is used to create the necessary db tables for the Model
+func GetTable() database.Table {
+	return userTable{}
 }
 
 // GetBy gets a User by field and value
@@ -76,7 +73,7 @@ func GetBy(db *database.DB, field string, value interface{}, reqID string) (u Us
 
 	if err != nil {
 		logger.Errorf("%v:User:GetBy() Couldn't get user by field = '%s', value = '%v': %s", reqID, field, value, err.Error())
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
@@ -102,7 +99,7 @@ func GetByID(db *database.DB, userID, reqID string) (u User, dberr *database.Err
 
 	if err != nil {
 		logger.Errorf("%v:User:GetByID() Couldn't get user(%s): %s", reqID, userID, err.Error())
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
@@ -118,7 +115,7 @@ func GetList(db *database.DB, reqID string) (users Users, dberr *database.Error)
 	rows, err := db.GetInstance().Query(qry)
 	if err != nil {
 		logger.Errorf("%s:Error Getting list of users: %v", reqID, err)
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
@@ -128,7 +125,7 @@ func GetList(db *database.DB, reqID string) (users Users, dberr *database.Error)
 		var createdAt, confirmedAt time.Time
 		if err = rows.Scan(&u.ID, &u.Username, &u.Confirmed, &confirmedAt, &createdAt); err != nil {
 			logger.Errorf("%s:Error Scanning Row of users: %v", reqID, err)
-			dberr = db.FormError(err, &qry, "users")
+			dberr = db.FormError(err, qry, "users")
 			return
 		}
 		u.CreatedAt = createdAt.Unix()
@@ -139,7 +136,7 @@ func GetList(db *database.DB, reqID string) (users Users, dberr *database.Error)
 	}
 	if err = rows.Err(); err != nil {
 		logger.Errorf("%s:Error Scanning in Row of users: %v", reqID, err)
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
@@ -166,7 +163,7 @@ func (u *User) Insert(db *database.DB, reqID string) (dberr *database.Error) {
 
 	if err != nil {
 		logger.Errorf("%v:User:Insert() Couldn't insert new user: %s", reqID, err.Error())
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
@@ -202,7 +199,7 @@ func (u *User) Update(db *database.DB, reqID string) (dberr *database.Error) {
 
 	if err != nil {
 		logger.Errorf("%v:User:Update() Couldn't update user: %s", reqID, err.Error())
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
@@ -225,11 +222,39 @@ func Delete(db *database.DB, userID, reqID string) (dberr *database.Error) {
 
 	if _, err := db.GetInstance().Exec(qry, userID); err != nil {
 		logger.Errorf("%v:User:Delete() Couldn't delete user: %s", reqID, err.Error())
-		dberr = db.FormError(err, &qry, "users")
+		dberr = db.FormError(err, qry, "users")
 		return
 	}
 
 	return
+}
+
+// scanAll scans a full row with all its columns into a user
+func scanAll(row *sql.Row, u *User) error {
+	var createdAt, confirmedAt time.Time
+	err := row.Scan(&u.ID, &u.Username, &u.Password, &u.Salt, &u.Confirmed, &confirmedAt, &createdAt)
+	if err != nil {
+		return err
+	}
+	u.CreatedAt = createdAt.Unix()
+	if !confirmedAt.IsZero() {
+		u.ConfirmedAt = confirmedAt.Unix()
+	}
+	return nil
+}
+
+// scanAllSafe scans a full row with all its columns into a user (except password related stuff)
+func scanAllSafe(row *sql.Row, u *User) error {
+	var createdAt, confirmedAt time.Time
+	err := row.Scan(&u.ID, &u.Username, &u.Confirmed, &confirmedAt, &createdAt)
+	if err != nil {
+		return err
+	}
+	u.CreatedAt = createdAt.Unix()
+	if !confirmedAt.IsZero() {
+		u.ConfirmedAt = confirmedAt.Unix()
+	}
+	return nil
 }
 
 // formSetStatement generates a SET statement starting with $2

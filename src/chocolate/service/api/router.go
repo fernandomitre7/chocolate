@@ -32,6 +32,19 @@ func NewRouter(conf *config.Configuration, apidb *database.DB) *mux.Router {
 
 		handler = metrics.Log(handler, route.Name)
 
+		// TODO: implement routes Middleware
+		/* if len(route.Middleware) > 0 {
+			// add them in reverse because middleware is executed in the reverse on how it is added
+			// middleware = {0, 1, 2}
+			// added as 2, 1, 0, auth, ctx
+			// executed as ctx, auth, 0, 1, 2
+
+			for i := len(route.Middleware) - 1; i >= 0; i-- {
+				handler = route.Middleware[i]
+			}
+
+		} */
+
 		if route.Auth != nil {
 			// Assign Authorization Validation
 			handler = auth.Validate(handler, audience, route.Auth.Roles, route.Auth.CheckEmail)

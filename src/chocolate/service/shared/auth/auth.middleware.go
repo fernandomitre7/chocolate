@@ -61,6 +61,8 @@ func Validate(next http.Handler, audience string, roles map[string]struct{}, che
 		// TODO: Verify Token was not blacklisted (when user logsout)
 
 		ctx := context.WithValue(r.Context(), reqcontext.AuthJWTKey, *claims)
+		// NOTE: should we add the userID in the context? we can get it from the claims
+
 		next.ServeHTTP(rw, r.WithContext(ctx))
 	})
 }

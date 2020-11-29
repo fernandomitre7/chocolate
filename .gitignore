@@ -18,3 +18,7 @@
 pkg
 src/github.com
 src/golang.org
+
+config/*key*
+logs/
+bin/PID

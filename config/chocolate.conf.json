@@ -7,6 +7,7 @@
     },
     "env": "dev",
     "debug": true,
+    "test": true,
     "jwt": {
         "pub_key": "config/jwt_key.pub",
         "priv_key": "config/jwt_key.priv",
@@ -15,9 +16,9 @@
     "db": {
         "host": "localhost",
         "port": "5432",
-        "user": "user",
-        "password": "password",
-        "database": "chocolate"
+        "user": "chocolate",
+        "password": "chocolate",
+        "database": "chocolate-db"
     },
     "email": {
         "provider": "google",

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"chocolate/service/database"
+	"chocolate/service/models"
 	"chocolate/service/shared/auth/jwt"
 	"chocolate/service/shared/config"
 	"chocolate/service/shared/email"
@@ -119,6 +120,10 @@ func main() {
 		panic(err)
 	}
 	defer serviceDB.Close()
+	if err := serviceDB.Init(models.GetDBTables()); err != nil {
+		fmt.Printf("serviceDB.Init() error = %v\n", err)
+		panic(err)
+	}
 
 	// Initialize Auth Keys
 	if err = jwt.Init(_conf); err != nil {

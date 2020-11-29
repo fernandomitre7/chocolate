@@ -1,6 +1,6 @@
 #!/bin/sh
 # TODO: move this to function
-SERVICE_NAME = "chocolate"
+SERVICE_NAME="chocolate"
 EGREP=`ps -a | egrep ${SERVICE_NAME}`
 
 if [[ "${EGREP}" != *"egrep"* ]]; then

@@ -1,5 +1,8 @@
 # To-Dos:
 
+- Add email template for email confirmation!
+- Add Middleware on routes to add special checks, like on /users one is used to check the email
+- Use new Go's error with fmt.Printf(%w) to be able to use errors.Is, errors.As, etc
 
 # Ideas:
 

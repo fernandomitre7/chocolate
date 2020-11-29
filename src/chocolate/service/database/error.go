@@ -1,6 +1,7 @@
 package database
 
 import (
+	"chocolate/service/shared/logger"
 	"fmt"
 )
 
@@ -15,8 +16,9 @@ const (
 	ErrorAlreadyExists = errorCode(5)
 	ErrorNoData        = errorCode(6)
 	// ErrorExecute for any errors made by a bad query
-	ErrorExecute = errorCode(6)
-	ErrorNoRows  = errorCode(7)
+	ErrorExecute           = errorCode(7)
+	ErrorNoRows            = errorCode(8)
+	ErrorMissingExtensions = errorCode(9)
 )
 
 // Error holds DB errors
@@ -29,6 +31,7 @@ type Error struct {
 }
 
 func (e Error) Error() string {
+	logger.Errorf("database/error:Error() is Inner NIL = %v", e.Inner == nil)
 	return fmt.Sprintf("Code: %v, Message: %s, Table: %s, Query: %s, Inner error: %v", e.Code, e.Message, e.Table, e.Query, e.Inner)
 }
 

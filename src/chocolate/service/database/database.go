@@ -36,6 +36,13 @@ type DB struct {
 	cfg config.SQLConfig
 }
 
+// Table is the interface needed by the API Models to be able to create themselves,
+// This means creating the Tables and Indexes needed for the specific Model
+type Table interface {
+	Create(db *DB) (dberr *Error)
+	Name() string
+}
+
 // GetInstance returns the actual sql.DB
 func (db DB) GetInstance() *sql.DB {
 	return db.dbsql
@@ -97,9 +104,52 @@ func (db *DB) Close() (err error) {
 	return
 }
 
+func installExtensions(db *DB) *Error {
+	qry := `CREATE EXTENSION IF NOT EXISTS "uuid-ossp"`
+	if _, err := db.dbsql.Exec(qry); err != nil {
+		logger.Errorf("database:installExtensions() Failed to install extension err: %s", err.Error())
+		return db.FormError(err, qry, "extensions")
+	}
+	return nil
+}
+
+// Init will hold any type of initialization logic needed by the DB,
+// Right now it only creates the needed Model's tables
+func (db *DB) Init(tables []Table) *Error {
+	// check that extensions are properly installed
+
+	extQry := `SELECT uuid_generate_v4()`
+
+	if _, err := db.dbsql.Exec(extQry); err != nil {
+		logger.Errorf("database:Init() checking of extensions failed %s", err.Error())
+		dberr := db.FormError(err, extQry, "")
+		if dberr.Code == ErrorMissingExtensions {
+			logger.Infof("database:Init() missing uuid extensions, installing now")
+			if dberr = installExtensions(db); dberr != nil {
+				return dberr
+			}
+		} else {
+			return dberr
+		}
+	}
+
+	for _, table := range tables {
+
+		logger.Infof("Creating table %q", table.Name())
+		if dberr := table.Create(db); dberr != nil {
+			// NOTE: what happens if one table is created but another isn't?
+			// I guess is OK, we need the tables and they all should have the "IF NOT EXISTS" clause
+			logger.Errorf("Error creating table %q. err = %v", table.Name(), dberr.Error())
+			return dberr
+		}
+	}
+
+	return nil
+}
+
 // FormError returns the pq(postgres) error wrapped in a Error
-func (db *DB) FormError(err error, qry *string, table string) (dberr *Error) {
-	query := *qry
+func (db *DB) FormError(err error, query, table string) (dberr *Error) {
+	logger.Debugf("DB.FormError() err = %v, table = %q, query = %q", err, table, query)
 	if err == sql.ErrNoRows {
 		dberr = NewError(ErrorNoRows, "No rows found", query, table, err)
 		return
@@ -112,6 +162,9 @@ func (db *DB) FormError(err error, qry *string, table string) (dberr *Error) {
 			dberr = NewError(ErrorInternal, "Connection Error", query, table, pqerr)
 		} else if strings.HasPrefix(code, internalErrorClass) {
 			dberr = NewError(ErrorInternal, "Internal DB Error", query, table, pqerr)
+		} else if code == "42883" {
+			// 42883 = "undefined_function"
+			dberr = NewError(ErrorMissingExtensions, "Missing Postgres extension", query, table, pqerr)
 		} else if code == "23505" {
 			// unique constrain violation
 			dberr = NewError(ErrorAlreadyExists, "Already Exists, unique constrain violation", query, table, pqerr)

@@ -51,7 +51,7 @@ func (u *User) Decode(data []byte) (err error) {
 	return json.Unmarshal(data, u)
 }
 
-// Check if we need it and not just Decode
+// TODO: Check if we need it and not just Decode
 // DecodeUser converts json bytes into a UserAuth
 func DecodeUser(data []byte) (u *User, err error) {
 	u = &User{}
